@@ -1,37 +1,44 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Product = require('./models/Product');  // Assuming a Mongoose named Product
+const Product = require('./models/Product');
 const app = express();
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27017/productsDB', {
+mongoose.connect('mongodb://localhost/reactdata', {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
+    useUnifiedTopology: true
 });
 
 // Create a new product
 app.post('/products', async (req, res) => {
     const product = new Product(req.body);
     await product.save();
-    res.send(product);
+    res.status(201).send(product);
 });
 
-//Read all products
-app.get('/products', async (req, res) => {
+// Read all products or a single product 
+app.get('/products/:id?', async (req, res) => {
+    if(req.params.id) {
+        const product = await Product.findById(req.params.id);
+        if(!product) return res.status(404).send('Product not found');
+        return res.send(product);
+    }
     const products = await Product.find();
     res.send(products);
 });
 
 // Update an existing product
 app.put('/products/:id', async (req, res) => {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body);
+    const product = await Product.findByIdAndUpdate(req.params.id, { price: req.body.price }, {new: true});
+    if(!product) return res.status(404).send('Product not found');
     res.send(product);
 });
 
 // Delete a product
 app.delete('/products/:id', async (req, res) => {
-    await Product.findByIdAndDelete(req.params.id);
-    res.send({ message: 'Product deleted' });
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if(!product) return res.status(404).send('Product not found');
+    res.status(204).send();
 });
 
 const PORT = 5000;
